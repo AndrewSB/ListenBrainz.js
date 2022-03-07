@@ -8,32 +8,21 @@ var replace = require('gulp-replace');
 var webpack = require('webpack');
 
 
-gulp.task('build', [
-    'build:amd',
-    'build:bower',
-    'build:browser',
-    'build:transpile'
-]);
-
-gulp.task('webpack', [
-    'webpack:amd',
-    'webpack:browser'
-]);
-
 // region Transpile
 
-gulp.task('build:transpile', [
-    'clean:lib'
-], () => {
-    var babel = require('gulp-babel');
-    var sourcemaps = require('gulp-sourcemaps');
+gulp.task('build:transpile', gulp.series[
+    'clean:lib',
+    () => {
+        var babel = require('gulp-babel');
+        var sourcemaps = require('gulp-sourcemaps');
 
-    return gulp.src('src/**/*.js')
-        .pipe(sourcemaps.init())
-        .pipe(babel())
-        .pipe(sourcemaps.write('.'))
-        .pipe(gulp.dest(__dirname + '/lib'));
-});
+        return gulp.src('src/**/*.js')
+            .pipe(sourcemaps.init())
+            .pipe(babel())
+            .pipe(sourcemaps.write('.'))
+            .pipe(gulp.dest(__dirname + '/lib'));
+    }
+]);
 
 gulp.task('clean:lib', () => {
     return del([__dirname + '/lib']);
@@ -43,21 +32,21 @@ gulp.task('clean:lib', () => {
 
 // region AMD
 
-gulp.task('build:amd', [
+gulp.task('build:amd', gulp.series([
     'clean:dist:amd',
     'webpack:amd',
     'sourcemap:copy:amd'
-], function() {
+]), function() {
     return gulp
         .src(__dirname + '/build/amd/**/*.js')
         .pipe(flatten())
         .pipe(gulp.dest(__dirname + '/dist/amd'));
 });
 
-gulp.task('webpack:amd', [
+gulp.task('webpack:amd', gulp.series([
     'webpack:amd:normal',
     'webpack:amd:minified'
-]);
+]));
 
 gulp.task('webpack:amd:normal', [
     'clean:build:amd:normal'
@@ -97,30 +86,30 @@ gulp.task('clean:dist:amd', () => {
 
 // region Bower
 
-gulp.task('build:bower', [
+gulp.task('build:bower', gulp.series([
     'clean:dist:bower',
     'webpack:bower',
     'sourcemap:copy:bower'
-], function() {
+]), function() {
     return gulp.src(__dirname + '/build/bower/**/*.js')
         .pipe(flatten())
         .pipe(gulp.dest(__dirname + '/dist/bower'));
 });
 
-gulp.task('webpack:bower', [
+gulp.task('webpack:bower', gulp.parallel([
     'webpack:bower:normal',
     'webpack:bower:minified'
-]);
+]));
 
-gulp.task('webpack:bower:normal', [
+gulp.task('webpack:bower:normal', gulp.parallel([
     'clean:build:bower:normal'
-], (done) => {
+]), (done) => {
     webpackBuild(require('./webpack.config.bower'), done);
 });
 
-gulp.task('webpack:bower:minified', [
+gulp.task('webpack:bower:minified', gulp.parallel([
     'clean:build:bower:minified'
-], (done) => {
+]), (done) => {
     webpackBuild(require('./webpack.config.bower'), done, {
         minify: true
     });
@@ -150,36 +139,36 @@ gulp.task('clean:dist:bower', () => {
 
 // region Browser
 
-gulp.task('build:browser', [
+gulp.task('build:browser', gulp.series([
     'clean:dist:browser',
     'webpack:browser',
     'sourcemap:copy:browser'
-], function() {
+]), function() {
     return gulp.src(__dirname + '/build/browser/**/*.js')
         .pipe(flatten())
         .pipe(gulp.dest(__dirname + '/dist/browser'));
 });
 
-gulp.task('webpack:browser', [
+gulp.task('webpack:browser', gulp.parallel([
     'webpack:browser:normal',
     'webpack:browser:minified'
-]);
+]));
 
-gulp.task('webpack:browser:normal', [
+gulp.task('webpack:browser:normal', gulp.series([
     'clean:build:browser:normal'
-], (done) => {
+]), (done) => {
     webpackBuild(require('./webpack.config.browser'), done);
 });
 
-gulp.task('webpack:browser:minified', [
+gulp.task('webpack:browser:minified', gulp.series([
     'clean:build:browser:minified'
-], (done) => {
+]), (done) => {
     webpackBuild(require('./webpack.config.browser'), done, {
         minify: true
     });
 });
 
-gulp.task('sourcemap:copy:browser', ['webpack:browser'], () => {
+gulp.task('sourcemap:copy:browser', gulp.series(['webpack:browser']), () => {
     return gulp.src('build/browser/**/*.map')
         .pipe(flatten())
         .pipe(replace(__dirname + '\\', ''))
@@ -240,3 +229,15 @@ function webpackBuild(config, callback, options) {
 }
 
 // endregion
+
+gulp.task('build', gulp.series([
+    'build:amd',
+    'build:bower',
+    'build:browser',
+    'build:transpile'
+]));
+
+gulp.task('webpack', gulp.parallel([
+    'webpack:amd',
+    'webpack:browser'
+]));
